@@ -2,7 +2,7 @@
 var ws
 var connected = false
 
-var data = {x: 0, y: 0, frame: 1, angle: 0, scale: 1, ball: false}
+var data = {}
 var playerData = {}
 var id = 0
 
@@ -52,6 +52,8 @@ function connectToServer() {
             connected = true
             id = msg.connected
             sendMsg({view: vid})
+            data = {}
+            sendData()
         }
         if ("ping" in msg && !document.hidden) {
             sendMsg({ping: true})
@@ -60,11 +62,28 @@ function connectToServer() {
             console.log(JSON.stringify(msg.views))
         }
         if ("data" in msg) {
-            playerData = msg.data
+            for (let player in msg.data) {
+                if (!(player in playerData)) {
+                    playerData[player] = msg.data[player]
+                }
+            }
+            for (let player in playerData) {
+                if (!(player in msg.data)) {
+                    delete playerData[player]
+                } else {
+                    playerData[player] = {...playerData[player], ...msg.data[player]}
+                }
+            }
             for (let player in playerData) {
                 if ("frames" in playerData[player]) {
                     playerData[player].framesA = playerData[player].frames.length
                     playerData[player].framesT = 0
+                }
+                if (player in players) {
+                    players[player].lx = players[player].x
+                    players[player].ly = players[player].y
+                    players[player].langle = players[player].angle
+                    players[player].lh = players[player].h
                 }
             }
         }
@@ -78,15 +97,27 @@ function connectToServer() {
 
 connectToServer()
 
-setInterval(() => {
+function sendData() {
+    // console.log("sending data", new Date().getTime())
+    let oldData = data
     data = {
         x: Math.round(player.x*100)/100,
         y: Math.round(player.y*100)/100,
         frames: player.frames,
         angle: player.angle,
         scale: player.ball ? player.ballDir : player.dir,
-        ball: player.ball
+        ball: player.ball,
+        h: player.h,
+        username: username,
+        colour: player.colour,
+        collected: collected
+    }
+    let newData = {}
+    for (let key in data) {
+        if (data[key] != oldData[key]) {
+            newData[key] = data[key]
+        }
     }
     player.frames = []
-    sendMsg({data: data})
-}, 1000/10)
+    sendMsg({data: newData})
+}

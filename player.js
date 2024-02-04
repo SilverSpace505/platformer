@@ -1,7 +1,7 @@
 
 class Player {
     minX = -51.5
-    maxX = 60
+    maxX = 86
     x = 0
     y = 0
     vx = 0
@@ -17,7 +17,7 @@ class Player {
     jumpSpeed = 650
     friction = 0
     slope = 1
-    slopeAmt = 0.01
+    slopeAmt = 0.1
     lx = 0
     ly = 0
     size = pxs
@@ -26,12 +26,14 @@ class Player {
     animTime = 0
     transforming = false
     ball = false
-    transformT = 0
+    transformT = 1
     ballDir = 0
-    splits = 5
+    splits = 4
     inWater = false
     covers = {}
     frames = []
+    h = 1
+    colour = "blue"
     constructor(x, y) {
         this.x = x
         this.y = y
@@ -62,6 +64,12 @@ class Player {
             this.covers[cover] = getTile(Math.floor(this.x/ts.x), Math.floor(this.y/ts.y), cover)
         }
         this.inWater = getTile(Math.floor(this.x/ts.x), Math.floor(this.y/ts.y), 1) == 16 || getTile(Math.floor(this.x/ts.x), Math.floor((this.y-this.height/4)/ts.y), 1) == 16 || getTile(Math.floor(this.x/ts.x), Math.floor((this.y+this.height/4)/ts.y), 1) == 16
+
+        let cTile = getTile(Math.floor(this.x/ts.x), Math.floor(this.y/ts.y), 0)
+        if (!editor && hoverT.includes(cTile)) {
+            collected += 1
+            setTile(Math.floor(this.x/ts.x), Math.floor(this.y/ts.y), 0, 0)
+        }
 
         this.floor -= tDelta
         if (!editor) this.vy -= this.gravity * tDelta
@@ -101,6 +109,7 @@ class Player {
         if (this.transforming) {
             this.transformT += tDelta * 10
             if (this.transformT > 1) {
+                this.transformT = 1
                 this.transforming = false
             }
         }
@@ -117,7 +126,7 @@ class Player {
 
         if (!editor) this.x = Math.min(Math.max(this.x, this.minX), this.maxX)
 
-        if (this.y < -2000) {
+        if (this.y < -10000) {
             let off = camera.y - this.y
             this.tp(this.x, 2000)
             camera.y = this.y + off
@@ -137,10 +146,24 @@ class Player {
         let h = 128*su*6
         if (editor && !ui.hovered(canvas.width - w/2-10*su, h/2+10*su, w, h)) {
             let mw = {x: (mouse.x - canvas.width/2) / camera.zoom / lparallax[sLayer] + camera.x, y: ((canvas.height-mouse.y) - canvas.height/2) / camera.zoom / lparallax[sLayer] + camera.y}
-            if (mouse.rdown) {
+            if (mouse.rdown && getTile(Math.floor(mw.x/ts.x), Math.floor(mw.y/ts.y), sLayer) != 0) {
+                if (keys["KeyB"]) {
+                    spreadb = getTile(Math.floor(mw.x/ts.x), Math.floor(mw.y/ts.y), sLayer)
+                    spreadt = 0
+                    spreadl = sLayer
+                    spread = []
+                    spread.push([Math.floor(mw.x/ts.x), Math.floor(mw.y/ts.y)].join(","))
+                }
                 setTile(Math.floor(mw.x/ts.x), Math.floor(mw.y/ts.y), sLayer, 0)
             }
-            if (mouse.ldown) {
+            if (mouse.ldown && getTile(Math.floor(mw.x/ts.x), Math.floor(mw.y/ts.y), sLayer) != selected) {
+                if (keys["KeyB"]) {
+                    spreadb = getTile(Math.floor(mw.x/ts.x), Math.floor(mw.y/ts.y), sLayer)
+                    spreadt = selected
+                    spreadl = sLayer
+                    spread = []
+                    spread.push([Math.floor(mw.x/ts.x), Math.floor(mw.y/ts.y)].join(","))
+                }
                 setTile(Math.floor(mw.x/ts.x), Math.floor(mw.y/ts.y), sLayer, selected)
             }
         }
@@ -154,7 +177,7 @@ class Player {
         this.transforming = true
         this.angle = 0
         this.ballDir = this.dir
-        if (this.transformT > 1) this.transformT = 0
+        if (this.transformT >= 1) this.transformT = 0
     }
     isColliding() {
         if (editor) return false
@@ -232,7 +255,7 @@ class Player {
                 this.y -= this.slope*1.1 * Math.abs(x / steps)
                 if (this.isColliding()) {
                     this.y += this.slope*1.1 * Math.abs(x / steps)
-                    while (!this.isColliding()) {
+                    while (!this.isCollidingFloor()) {
                         this.y -= this.slopeAmt
                     }
                     this.y += this.slopeAmt
@@ -283,6 +306,24 @@ class Player {
         }
         this.frames.push(frame)
 
+        if (collected >= totalCollect) {
+            ctx.save()
+            ctx.translate(...tsc(this.vix, this.viy))
+            if (this.ball) {
+                ctx.scale(this.ballDir, 1)
+            } else {
+                ctx.scale(this.dir, 1)
+            }
+            let s = Math.sin(time*5)/2+0.5
+            let s2 = Math.sin(time*5+Math.PI*2/3)/2+0.5
+            let s3 = Math.sin(time*5+Math.PI*2/3*2)/2+0.5
+            ctx.globalAlpha = 0.5
+            ui.img(0, 0, 18*this.size*(1+s*0.15)*camera.zoom, 26*this.size*(1+s*0.15)*camera.zoom, playerImgs[this.colour], [frame*18+0.1, 0, 17.8, 26])
+            ui.img(0, 0, 18*this.size*(1+s2*0.15)*camera.zoom, 26*this.size*(1+s2*0.15)*camera.zoom, playerImgs[this.colour], [frame*18+0.1, 0, 17.8, 26])
+            ui.img(0, 0, 18*this.size*(1+s3*0.15)*camera.zoom, 26*this.size*(1+s3*0.15)*camera.zoom, playerImgs[this.colour], [frame*18+0.1, 0, 17.8, 26])
+            ctx.globalAlpha = 1
+            ctx.restore()
+        }
         ctx.save()
         ctx.translate(...tsc(this.vix, this.viy))
         if (this.ball) {
@@ -293,7 +334,24 @@ class Player {
         } else {
             ctx.scale(this.dir, 1)
         }
-        ui.img(0, 0, 18*this.size*camera.zoom, 26*this.size*camera.zoom, playerImg, [frame*18, 0, 18, 26])
+        ui.img(0, 0, 18*this.size*camera.zoom, 26*this.size*camera.zoom, playerImgs[this.colour], [frame*18+0.1, 0, 17.8, 26])
         ctx.restore()
+
+        this.h = 1
+        if (this.ball) this.h = 1 - this.transformT * 0.7
+        if (!this.ball) this.h = 0.3 + this.transformT * 0.7
+
+        if (collected >= totalCollect) {
+            let s = Math.sin(time*5)/2+0.5
+            let s2 = Math.sin(time*5+Math.PI*2/3)/2+0.5
+            let s3 = Math.sin(time*5+Math.PI*2/3*2)/2+0.5
+            ctx.globalAlpha = 0.5
+            ui.text(...tsc(this.vix, this.viy + (this.height/2 + 20) * this.h), 25*(1+s*0.15)*camera.zoom, username, {align: "center", colour: baseColours[this.colour]})
+            ui.text(...tsc(this.vix, this.viy + (this.height/2 + 20) * this.h), 25*(1+s2*0.15)*camera.zoom, username, {align: "center", colour: baseColours[this.colour]})
+            ui.text(...tsc(this.vix, this.viy + (this.height/2 + 20) * this.h), 25*(1+s3*0.15)*camera.zoom, username, {align: "center", colour: baseColours[this.colour]})
+            ctx.globalAlpha = 1
+        }
+
+        ui.text(...tsc(this.vix, this.viy + (this.height/2 + 20) * this.h), 25*camera.zoom, username, {align: "center"})
     }
 }

@@ -7,7 +7,15 @@ var rd = {x: 2, y: 2}
 
 var player = new Player(0, 150)
 
+var baseColours = {
+    red: [204, 0, 0, 1],
+    yellow: [204, 198, 0, 1],
+    green: [0, 204, 10, 1],
+    blue: [0, 109, 204, 1]
+}
+
 var camera = {x: player.x, y: player.y, zoom: 1}
+var cameraZoom = 0.875
 
 var chunks = {}
 var loadC = 0
@@ -58,7 +66,10 @@ var tiles = [
 /*42*/ [1, 10],
 /*43*/ [2, 10],
 /*44*/ [3, 10],
-
+/*45*/ [0, 11],
+/*46*/ [1, 11],
+/*47*/ [2, 11],
+/*48*/ [3, 11]
 // /*00*/ [0, 0],
 ]
 
@@ -66,9 +77,9 @@ var nsolid = [0, 5, 6, 16, 26, 27, 28]
 var transparent = [16]
 var hoverT = [26, 27, 28]
 
-var coverDfs = {"3": 0.8, "4": 0.8, "5": 1, "6": 1}
-var covers = {"3": {}, "4": {}, "5": {}, "6": {}}
-var mergeCovers = [3, 4, 5, 6]
+var coverDfs = {"3": 0.8, "4": 0.8, "5": 1, "6": 1, "7": 0.8}
+var covers = {"3": {}, "4": {}, "5": {}, "6": {}, "7": {}}
+var mergeCovers = [3, 4, 5, 6, 7]
 
 var slopes = {
     "8": [-0.5, -0.5, 0.5, 0.5, -1], 
@@ -99,11 +110,13 @@ var slopes = {
     "42": [-0.5, -0.5, 0.5, 0.5, 1],
     "43": [0.5, -0.5, -0.5, 0.5, 1],
     "44": [-0.5, -0.5, 0.5, 0.5, 1],
+    "45": [0.5, -0.5, -0.5, 0.5, 1],
+    "46": [-0.5, -0.5, 0.5, 0.5, 1],
 }
-var dlayers = [-2, -1, 0, 1, 2, 3, 4, 5, 6]
+var dlayers = [-2, -1, -3, 0, 1, 2, 3, 4, 7, 5, 6]
 var clayers = [0, -1]
-var lbrightness = {"-2": 0.6, "-1": 1, "0": 1, "1": 1, "2": 1, "3": 1, "4": 1, "5": 1, "6": 1}
-var lparallax = {"-2": 1, "-1": 1, "0": 1, "1": 1, "2": 1, "3": 1, "4": 1, "5": 1, "6": 1}
+var lbrightness = {"-3": 1, "-2": 0.6, "-1": 1, "0": 1, "1": 1, "2": 1, "3": 1, "4": 1, "5": 1, "6": 1, "7": 1}
+var lparallax = {"-3": 1, "-2": 1, "-1": 1, "0": 1, "1": 1, "2": 1, "3": 1, "4": 1, "5": 1, "6": 1, "7": 1}
 
 function isCollidingPoint(x, y) {
     for (let clayer of clayers) {
@@ -133,24 +146,50 @@ function isCollidingPoint(x, y) {
     return false
 }
 
-function setTile(x, y, l,  v) {
+function setTile(x, y, l,  v, newS=true) {
     let c = Math.floor(x/cs.x)+","+Math.floor(-y/cs.y)
     if (c in sets) {
         let poses = sets[c].map(set => set[0]+","+set[1]+","+set[2])
         if (poses.includes(x+","+y+","+l)) {
-            sets[c][poses.indexOf(x+","+y+","+l)][3] = v
-        } else {
+            if (v == 0) {
+                sets[c].splice(poses.indexOf(x+","+y+","+l), 1)
+            } else {
+                sets[c][poses.indexOf(x+","+y+","+l)][3] = v
+            }
+        } else if (v != 0) {
             sets[c].push([x, y, l, v])
         }
-    } else {
+    } else if (v != 0) {
         sets[c] = [[x, y, l, v]]
     }
+
+    if (newS && !editor) {
+        if (c in newSets) {
+            let poses = newSets[c].map(set => set[0]+","+set[1]+","+set[2])
+            if (poses.includes(x+","+y+","+l)) {
+                newSets[c][poses.indexOf(x+","+y+","+l)][3] = v
+            } else {
+                newSets[c].push([x, y, l, v])
+            }
+        } else {
+            newSets[c] = [[x, y, l, v]]
+        }
+        savedNewSets = JSON.stringify(newSets)
+    }
+
     if (c in chunks) {
         setTileR(x, y, l, v)
+        return true
+    } else {
+        return false
     }
 }
 
 var moveLayers = {}
+var savedSets = {}
+var savedNewSets = {}
+
+var totalCollect = 1
 
 fetch('world.txt')
   .then(response => {
@@ -162,17 +201,36 @@ fetch('world.txt')
   .then(fileContent => {
     let startTime = new Date().getTime()
     let loaded = JSON.parse(fileContent)
+    totalCollect = 0
     for (let chunk in loaded) {
         for (let set of loaded[chunk]) {
             if (set[2] in moveLayers) set[2] = moveLayers[set[2]]
-            if (set[2] in lbrightness) setTile(set[0], set[1], set[2], set[3])
+            if (set[2] in lbrightness) setTile(set[0], set[1], set[2], set[3], false)
+            if (set[2] == 0 && hoverT.includes(set[3])) totalCollect++
         }
     }
+    savedSets = JSON.stringify(sets)
     console.log("World loaded in", new Date().getTime() - startTime+"ms")
+
+    if (saveData) {
+        if ("savedSets" in saveData) {
+            loadNewSets(JSON.parse(saveData.savedSets))
+            newSets = JSON.parse(saveData.savedSets)
+            savedNewSets = saveData.savedSets
+        }
+    }
   })
   .catch(error => {
     console.error("Error fetching the file:", error)
   })
+
+function loadNewSets(newSets={}) {
+    for (let chunk in newSets) {
+        for (let set of newSets[chunk]) {
+            setTile(set[0], set[1], set[2], set[3], false)
+        }
+    }
+}
 
 function loadChunk(x, y) {
     let chunk = {}
@@ -239,6 +297,29 @@ function gameTick() {
             }
         }
     }
+
+    let set = 0
+    let offs = [[-1, 0], [1, 0], [0, -1], [0, 1]]
+    let t = 0
+    let ospread = [...spread]
+    for (let pos of ospread) {
+        let pos2 = pos.split(",").map(a => parseInt(a))
+        for (let off of offs) {
+            t = getTile(pos2[0]+off[0], pos2[1]+off[1], spreadl)
+            if (t != spreadt && t == spreadb) {
+                if (setTile(pos2[0]+off[0], pos2[1]+off[1], spreadl, spreadt)) {
+                    spread.push([pos2[0]+off[0], pos2[1]+off[1]].join(","))
+                    set++
+                }
+            }
+        }
+    }
+    if (set <= 0) {
+        spread = []
+        spreadt = 0
+        spreadb = 0
+        spreadl = 0
+    }  
 
     player.tick()
 }
