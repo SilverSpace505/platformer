@@ -195,6 +195,12 @@ function update(timestamp) {
             players[player].angle += (playerData[player].angle - players[player].langle) * delta*10
             players[player].frame = playerData[player].frames[0]
             players[player].h += (playerData[player].h - players[player].lh) * delta*10
+
+            for (let key in players[player]) {
+                if (isNaN(players[player][key])) {
+                    players[player][key] = 0
+                }
+            }
         }
     }
 
