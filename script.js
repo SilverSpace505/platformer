@@ -209,17 +209,18 @@ function update(timestamp) {
         accumulator -= tDelta
     }
 
-    if (jKeys["Tab"]) {
-        editor = !editor
-        if (editor) {
-            sets = JSON.parse(savedSets)
-        } else {
-            savedSets = JSON.stringify(sets)
-            newSets = JSON.parse(savedNewSets)
-            loadNewSets(newSets)
-        }
-        chunks = {}
-    }
+    // if (jKeys["Tab"]) {
+    //     editor = !editor
+    //     if (editor) {
+    //         sets = JSON.parse(savedSets)
+    //     } else {
+    //         savedSets = JSON.stringify(sets)
+    //         newSets = JSON.parse(savedNewSets)
+    //         loadNewSets(newSets)
+    //     }
+    //     chunks = {}
+    // }
+    editor = false
 
     if (keys["KeyT"]) {
         accumulator = 0
@@ -232,7 +233,7 @@ function update(timestamp) {
         cameraZoom *= 1.01
     }
 
-    cameraZoom = Math.min(Math.max(cameraZoom, 0.875), 5)
+    if (!editor) cameraZoom = Math.min(Math.max(cameraZoom, 0.875), 5)
 
     camera.zoom = lerp(camera.zoom, su*cameraZoom, delta*10)
     if (time < 0.1) camera.zoom = su*cameraZoom

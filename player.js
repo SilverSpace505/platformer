@@ -11,13 +11,14 @@ class Player {
     angle = 0
     vix = 0
     viy = 0
-    gravity = 1200
+    gravity = 1500
     speed = 85
     floor = 0
-    jumpSpeed = 650
+    jumpSpeed = 1100
     friction = 0
     slope = 1
     slopeAmt = 0.1
+    jump = 0
     lx = 0
     ly = 0
     size = pxs
@@ -72,6 +73,7 @@ class Player {
         }
 
         this.floor -= tDelta
+        this.jump -= tDelta
         if (!editor) this.vy -= this.gravity * tDelta
         if (this.ball && !editor) this.speed /= 2
         if (keys["KeyA"]) {
@@ -94,7 +96,14 @@ class Player {
        
         if (keys["Space"] && this.floor > 0 && !editor) {
             this.floor = 0
-            this.vy = this.jumpSpeed
+            this.jump = 0.25
+            this.vy = this.jumpSpeed * 0.5
+        }
+        if ((keys["Space"] || this.jump > 0.2) && this.jump > 0 && !editor) {
+            this.vy += this.jumpSpeed * this.jump / 10 * 0.5
+        } else if (this.jump > 0 && !editor) {
+            this.jump = 0
+            this.vy *= 0.5
         }
         if (keys["ShiftLeft"]) {
             if (!this.ball) this.transform()
@@ -124,7 +133,7 @@ class Player {
         this.vy = Math.min(Math.max(this.vy, -2000), 2000)
         this.move(this.vx*tDelta, this.vy*tDelta, 1)
 
-        if (!editor) this.x = Math.min(Math.max(this.x, this.minX), this.maxX)
+        // if (!editor) this.x = Math.min(Math.max(this.x, this.minX), this.maxX)
 
         if (this.y < -10000) {
             let off = camera.y - this.y

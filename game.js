@@ -277,6 +277,12 @@ function gameTick() {
         loadC = 0.1
         let pc = {x: Math.floor(player.x/ts.x/cs.x), y: Math.floor(-player.y/ts.y/cs.y)}
         let nearby = []
+        let oldx = rd.x
+        let oldy = rd.y
+        rd.x *= 5 - camera.zoom*8
+        rd.y *= 5 - camera.zoom*8
+        rd.x = Math.max(Math.round(rd.x), 2)
+        rd.y = Math.max(Math.round(rd.y), 2)
         for (let x = -rd.x; x < rd.x+1; x++) {
             for (let y = -rd.y; y < rd.y+1; y++) {
                 let c = (pc.x+x)+","+(pc.y+y)
@@ -291,6 +297,8 @@ function gameTick() {
                 }
             }
         }
+        rd.x = oldx
+        rd.y = oldy
         for (let chunk in chunks) {
             if (!nearby.includes(chunk)) {
                 delete chunks[chunk]
