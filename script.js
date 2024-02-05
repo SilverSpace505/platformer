@@ -177,7 +177,7 @@ function update(timestamp) {
 
     for (let player in playerData) {
         if (id != player && !(player in players)) {
-            players[player] = {x: 0, lx: 0, ly: 0, y: 0, frame: 1, angle: 0, h: 1, langle: 0, lh: 1}
+            players[player] = {x: 0, lx: 0, ly: 0, y: 0, frame: 1, angle: 0, h: 1, langle: 0, lh: 1, lastu: time}
         }
     }
 
@@ -190,11 +190,13 @@ function update(timestamp) {
                 playerData[player].frames.splice(0, 1)
                 playerData[player].framesT -= 1/10 / playerData[player].framesA
             }
-            players[player].x += (playerData[player].x - players[player].lx) * delta*10
-            players[player].y += (playerData[player].y - players[player].ly) * delta*10
-            players[player].angle += (playerData[player].angle - players[player].langle) * delta*10
-            players[player].frame = playerData[player].frames[0]
-            players[player].h += (playerData[player].h - players[player].lh) * delta*10
+            if (time - players[player].lastu < 0.1) {
+                players[player].x += (playerData[player].x - players[player].lx) * delta*10
+                players[player].y += (playerData[player].y - players[player].ly) * delta*10
+                players[player].angle += (playerData[player].angle - players[player].langle) * delta*10
+                players[player].frame = playerData[player].frames[0]
+                players[player].h += (playerData[player].h - players[player].lh) * delta*10
+            }
 
             for (let key in players[player]) {
                 if (isNaN(players[player][key])) {

@@ -84,6 +84,7 @@ function connectToServer() {
                     players[player].ly = players[player].y
                     players[player].langle = players[player].angle
                     players[player].lh = players[player].h
+                    players[player].lastu = time
                 }
             }
         }
